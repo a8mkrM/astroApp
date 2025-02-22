@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: ${{ runner.workspace }}/android-sdk
+      # يمكن تعديل المسار بحيث يكون $HOME/android-sdk إذا كنت تفضل ذلك.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -41,6 +44,12 @@ jobs:
           rm -rf temp commandlinetools-linux-8512546_latest.zip
         shell: bash
 
+      - name: Set ANDROID_HOME in GitHub Environment
+        run: |
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
+        shell: bash
+
       - name: Accept Android Licenses
         run: |
           export PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin
@@ -55,6 +64,7 @@ jobs:
 
       - name: Build APK with Buildozer
         run: |
+          export ANDROID_HOME=$HOME/android-sdk
           export PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin
           buildozer -v android debug
         shell: bash
