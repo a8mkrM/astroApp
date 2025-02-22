@@ -53,7 +53,8 @@ icon.filename = planetimg/iconA.png
 # (list) Supported orientations
 # Valid options are: landscape, portrait, portrait-reverse or landscape-reverse
 orientation = portrait
-
+android.sdk_build_tools_version = 29.0.2
+android.sdk_path = $ANDROID_HOME
 # (list) List of service to declare
 #services = NAME:ENTRYPOINT_TO_PY,NAME2:ENTRYPOINT2_TO_PY
 
