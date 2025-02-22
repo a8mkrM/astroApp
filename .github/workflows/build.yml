@@ -44,6 +44,12 @@ jobs:
           rm -rf temp commandlinetools-linux-8512546_latest.zip
         shell: bash
 
+      - name: Create symlink for sdkmanager
+        run: |
+          mkdir -p $HOME/android-sdk/tools/bin
+          ln -s $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager $HOME/android-sdk/tools/bin/sdkmanager
+        shell: bash
+
       - name: Set ANDROID_HOME and update PATH
         run: |
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
