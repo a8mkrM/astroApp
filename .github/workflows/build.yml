@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest  # بدّل من ubuntu-20.04 إلى ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -30,8 +30,6 @@ jobs:
       - name: Build with Buildozer
         uses: ArtemSBulgakov/buildozer-action@v1
         id: buildozer
-        env:
-          DOCKER_BUILDKIT: 0   # تعطيل BuildKit لحل مشكلة تحميل صورة Docker
         with:
           command: buildozer android debug
           buildozer_version: stable
