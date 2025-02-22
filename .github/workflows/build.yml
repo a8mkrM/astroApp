@@ -10,8 +10,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ANDROID_HOME: ${{ github.workspace }}/android-sdk
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+      ANDROID_HOME: $HOME/android-sdk
+      ANDROID_SDK_ROOT: $HOME/android-sdk
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -44,22 +44,20 @@ jobs:
           rm -rf temp commandlinetools-linux-8512546_latest.zip
         shell: bash
 
-      - name: Set ANDROID_HOME and PATH in GitHub Environment
+      - name: Set ANDROID_HOME and update PATH
         run: |
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/29.0.2" >> $GITHUB_ENV
         shell: bash
 
       - name: Accept Android Licenses
         run: |
-          export PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin
-          yes | sdkmanager --licenses || true
+          sdkmanager --licenses < /dev/null || true
         shell: bash
 
       - name: Install Android Build Tools and Platforms
         run: |
-          export PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin
           sdkmanager "platform-tools" "build-tools;29.0.2" "platforms;android-29"
         shell: bash
 
