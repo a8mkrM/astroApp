@@ -5,7 +5,9 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # بدّل من ubuntu-20.04 إلى ubuntu-latest
+    runs-on: ubuntu-20.04
+    env:
+      DOCKER_BUILDKIT: 0  # تعطيل BuildKit لكل خطوات الـ job
     steps:
       - uses: actions/checkout@v2
 
