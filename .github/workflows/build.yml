@@ -23,7 +23,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential ccache git libncurses5-dev libffi-dev libssl-dev libsqlite3-dev zlib1g-dev libgmp-dev
         sudo apt-get install -y openjdk-8-jdk unzip
-        # تثبيت buildozer
+        # تثبيت buildozer وأدواته
         python -m pip install --upgrade pip
         pip install buildozer cython==0.29.19
         pip install kivy==2.1.0
@@ -32,7 +32,6 @@ jobs:
 
     - name: Build APK with Buildozer
       run: |
-        buildozer android clean
         buildozer -v android debug
 
     - name: Upload APK artifact
