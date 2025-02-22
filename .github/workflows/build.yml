@@ -30,6 +30,10 @@ jobs:
         # تثبيت باقي المتطلبات
         pip install pytz numpy matplotlib skyfield arabic_reshaper python-bidi
 
+    - name: Accept Android Licenses
+      run: |
+        yes | sdkmanager --licenses
+
     - name: Build APK with Buildozer
       run: |
         buildozer -v android debug
