@@ -1,44 +1,42 @@
-name: Build-APK
+name: Build APK
+
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Get Date
-        id: get-date
-        run: echo "::set-output name=date::$(date -u '+%Y%m%d')"
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.8'
 
-      - name: Cache Buildozer global directory
-        uses: actions/cache@v2
-        with:
-          path: .buildozer_global
-          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential ccache git libncurses5 libffi-dev libssl-dev libsqlite3-dev zlib1g-dev libgmp-dev
+        sudo apt-get install -y openjdk-8-jdk unzip
+        # تثبيت buildozer
+        python -m pip install --upgrade pip
+        pip install buildozer cython==0.29.19
+        pip install kivy==2.1.0
+        # تثبيت باقي المتطلبات
+        pip install pytz numpy matplotlib skyfield arabic_reshaper python-bidi
 
-      - name: Cache Buildozer directory
-        uses: actions/cache@v2
-        with:
-          path: .buildozer
-          key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
+    - name: Build APK with Buildozer
+      run: |
+        buildozer android clean
+        buildozer -v android debug
 
-      - name: Pull Buildozer image (latest for linux/amd64)
-        run: docker pull --platform linux/amd64 kivy/buildozer:latest
-
-      - name: Build APK with Buildozer
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            -w /app \
-            kivy/buildozer:latest \
-            buildozer android debug
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: package
-          path: bin/*.apk
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk
+        path: bin/*.apk
