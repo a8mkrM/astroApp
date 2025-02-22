@@ -30,6 +30,8 @@ jobs:
           key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
       - name: Build with Buildozer
+        env:
+          DOCKER_BUILDKIT: 0
         uses: ArtemSBulgakov/buildozer-action@v1
         id: buildozer
         with:
