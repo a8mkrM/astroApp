@@ -53,12 +53,12 @@ jobs:
 
       - name: Accept Android Licenses
         run: |
-          sdkmanager --licenses < /dev/null || true
+          sdkmanager --sdk_root=$HOME/android-sdk --licenses < /dev/null || true
         shell: bash
 
       - name: Install Android Build Tools and Platforms
         run: |
-          sdkmanager "platform-tools" "build-tools;29.0.2" "platforms;android-29"
+          sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "build-tools;29.0.2" "platforms;android-29"
         shell: bash
 
       - name: Create symlink for sdkmanager and aidl
