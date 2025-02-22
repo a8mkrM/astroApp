@@ -7,6 +7,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-20.04
+    env:
+      DOCKER_BUILDKIT: 0
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -29,11 +31,9 @@ jobs:
           key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
       - name: Build with Buildozer using Docker run
-        env:
-          DOCKER_BUILDKIT: 0
         run: |
-          docker pull kivy/buildozer:stable
-          docker run --rm -v ${{ github.workspace }}:/home/user/hostcwd -w /home/user/hostcwd kivy/buildozer:stable buildozer android debug
+          docker pull kivy/buildozer:latest
+          docker run --rm -v ${{ github.workspace }}:/home/user/hostcwd -w /home/user/hostcwd kivy/buildozer:latest buildozer android debug
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
