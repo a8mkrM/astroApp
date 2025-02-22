@@ -44,18 +44,11 @@ jobs:
           rm -rf temp commandlinetools-linux-8512546_latest.zip
         shell: bash
 
-      - name: Create symlink for sdkmanager and aidl
-        run: |
-          mkdir -p $HOME/android-sdk/tools/bin
-          ln -sf $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager $HOME/android-sdk/tools/bin/sdkmanager
-          ln -sf $HOME/android-sdk/build-tools/29.0.2/aidl $HOME/android-sdk/tools/bin/aidl
-        shell: bash
-
       - name: Set ANDROID_HOME and update PATH
         run: |
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$HOME/android-sdk/build-tools/29.0.2:$HOME/android-sdk/tools/bin" >> $GITHUB_ENV
+          echo "PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_ENV
         shell: bash
 
       - name: Accept Android Licenses
@@ -66,6 +59,13 @@ jobs:
       - name: Install Android Build Tools and Platforms
         run: |
           sdkmanager "platform-tools" "build-tools;29.0.2" "platforms;android-29"
+        shell: bash
+
+      - name: Create symlink for sdkmanager and aidl
+        run: |
+          mkdir -p $HOME/android-sdk/tools/bin
+          ln -sf $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager $HOME/android-sdk/tools/bin/sdkmanager
+          ln -sf $HOME/android-sdk/build-tools/29.0.2/aidl $HOME/android-sdk/tools/bin/aidl
         shell: bash
 
       - name: Build APK with Buildozer
