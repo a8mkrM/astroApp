@@ -47,4 +47,20 @@ jobs:
           yes | sdkmanager --licenses || true
         shell: bash
 
-      - name: Install Android Build Tools a
+      - name: Install Android Build Tools and Platforms
+        run: |
+          export PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin
+          sdkmanager "platform-tools" "build-tools;30.0.3" "platforms;android-30"
+        shell: bash
+
+      - name: Build APK with Buildozer
+        run: |
+          export PATH=$PATH:$HOME/android-sdk/cmdline-tools/latest/bin
+          buildozer -v android debug
+        shell: bash
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: "bin/*.apk"
