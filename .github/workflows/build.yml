@@ -26,15 +26,15 @@ jobs:
           path: .buildozer
           key: ${{ runner.os }}-${{ steps.get-date.outputs.date }}-${{ hashFiles('buildozer.spec') }}
 
-      - name: Pull Buildozer image (version 2021.11.12)
-        run: docker pull kivy/buildozer:2021.11.12
+      - name: Pull Buildozer image (latest for linux/amd64)
+        run: docker pull --platform linux/amd64 kivy/buildozer:latest
 
       - name: Build APK with Buildozer
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -w /app \
-            kivy/buildozer:2021.11.12 \
+            kivy/buildozer:latest \
             buildozer android debug
 
       - name: Upload APK artifact
