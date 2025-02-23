@@ -19,6 +19,15 @@ jobs:
           sudo apt-get install -y git zip openjdk-11-jdk python3 python3-pip virtualenv android-sdk android-sdk-platform-tools android-tools-adb
           pip3 install cython==0.29.32 buildozer
 
+      - name: Download Android SDK Command-line Tools
+        run: |
+          export ANDROID_HOME=$HOME/android-sdk
+          mkdir -p $ANDROID_HOME
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip -d $ANDROID_HOME
+          mv $ANDROID_HOME/cmdline-tools/* $ANDROID_HOME/cmdline-tools/latest
+          rm cmdline-tools.zip
+
       - name: Setup Android SDK
         run: |
           export ANDROID_HOME=$HOME/android-sdk
