@@ -3,6 +3,7 @@ import datetime, calendar, os
 import pytz
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 import arabic_reshaper
 from bidi.algorithm import get_display
@@ -17,7 +18,7 @@ from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 from kivy.clock import Clock
 from kivy.graphics import (Color, Ellipse, Line, StencilPush, StencilUse,
-                           StencilUnUse, StencilPop, Rectangle)
+                           StencilUnUse, StencilPop, Rectangle, RoundedRectangle)
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.uix.scrollview import ScrollView
 from kivy.properties import NumericProperty, BooleanProperty, ObjectProperty, StringProperty
@@ -29,7 +30,8 @@ from kivy.uix.popup import Popup
 from kivy.uix.anchorlayout import AnchorLayout
 
 from kivy.config import ConfigParser
-
+from kivy.uix.spinner import SpinnerOption
+from kivy.uix.dropdown import DropDown
 # -------------------------------------------------------------------
 Window.size = (360, 640)
 
@@ -52,11 +54,9 @@ except Exception as e:
 
 ts = load.timescale()
 
-# قائمة المواقع
+
 OMAN_LOCATIONS = {
-    "مسقط": ("23.5859 N", "58.4059 E"),
-    "صلالة": ("17.0199 N", "54.0890 E"),
-    "نزوى": ("23.2000 N", "56.9500 E"),
+    "إبراء": ("22.6917 N", "58.5417 E"), "أدم": ("22.2000 N", "57.5200 E"), "ازكي": ("22.8600 N", "57.7700 E"), "البريمي": ("24.2594 N", "55.7828 E"), "بدبد": ("23.4800 N", "58.0700 E"), "بدية": ("22.4167 N", "58.8333 E"), "بخا": ("26.0400 N", "56.2800 E"), "بركاء": ("23.7100 N", "57.8800 E"), "بهلا": ("22.9700 N", "57.3000 E"), "بوشر": ("23.5930 N", "58.4550 E"), "جعلان بني بو حسن": ("22.1300 N", "59.2000 E"), "جعلان بني بو علي": ("22.0833 N", "59.3333 E"), "جدة": ("21.5433 N", "39.1728 E"), "دبا": ("25.6100 N", "56.2600 E"), "دماء والطائيين": ("23.1667 N", "58.7500 E"), "ضنك": ("23.3800 N", "56.3300 E"), "ضلكوت": ("16.7100 N", "53.2900 E"), "الدقم": ("19.6488 N", "57.7083 E"), "رخيوت": ("16.8900 N", "53.8100 E"), "الرستاق": ("23.3938 N", "57.4258 E"), "الرياض": ("24.7136 N", "46.6753 E"), "سمائل": ("23.3300 N", "58.0000 E"), "السويق": ("23.8300 N", "57.4400 E"), "السنينة": ("23.9700 N", "56.1200 E"), "السيب": ("23.6840 N", "58.2160 E"), "شليم وجزر الحلانيات": ("17.4833 N", "56.0333 E"), "شناص": ("24.9600 N", "56.4500 E"), "صحار": ("24.3419 N", "56.7414 E"), "صحم": ("24.1600 N", "56.8800 E"), "صلالة": ("17.0199 N", "54.0890 E"), "صور": ("22.5667 N", "59.5333 E"), "طاقة": ("17.0400 N", "54.4100 E"), "عبري": ("23.2386 N", "56.5167 E"), "العامرات": ("23.4670 N", "58.6460 E"), "العوابي": ("23.2300 N", "57.6900 E"), "القابل": ("22.5000 N", "58.5000 E"), "قريات": ("23.2500 N", "58.9170 E"), "الكامل والوافي": ("22.3300 N", "59.2000 E"), "الخابورة": ("23.9500 N", "57.0800 E"), "خصب": ("26.2444 N", "56.2514 E"), "لوى": ("24.6800 N", "56.6300 E"), "مرباط": ("17.0100 N", "54.7000 E"), "مصيرة": ("20.5833 N", "58.8833 E"), "المصنعة": ("23.7700 N", "57.6700 E"), "مطرح": ("23.6150 N", "58.5670 E"), "مكة": ("21.4225 N", "39.8262 E"), "مقشن": ("18.1000 N", "54.0000 E"), "محضة": ("24.5100 N", "56.0300 E"), "محوت": ("20.3708 N", "58.0061 E"), "مدحاء": ("25.3217 N", "56.3400 E"), "مسقط": ("23.5859 N", "58.4059 E"), "المضيبي": ("22.4500 N", "58.0667 E"), "منح": ("22.9800 N", "57.6500 E"), "المزيونة": ("17.7000 N", "53.8000 E"), "نزوى": ("22.9342 N", "57.5338 E"), "نخل": ("23.3900 N", "57.8200 E"), "هيماء": ("19.2667 N", "56.3667 E"), "وادي بني خالد": ("22.5667 N", "59.0833 E"), "وادي المعاول": ("23.4700 N", "57.8300 E"), "ينقل": ("23.5100 N", "56.5500 E"), "ثمريت": ("17.6000 N", "54.0167 E"), "سدح": ("16.967 N", "55.033 E"), "الجازر": ("19.0800 N", "57.7300 E"), "الحمراء": ("23.1500 N", "57.2800 E")
 }
 
 def process_text(text):
@@ -91,7 +91,6 @@ def get_rise_set(ts, dt, body, include_date=False):
     location = get_current_location()
     dt_local = dt.astimezone(oman_tz)
 
-    # نبحث عن الأحداث خلال فترة 24 ساعة قبل وبعد dt (لضمان الحصول على كافة الأحداث)
     dt_start = (dt - datetime.timedelta(hours=24)).astimezone(utc_tz)
     dt_end = (dt + datetime.timedelta(hours=24)).astimezone(utc_tz)
     t0 = ts.from_datetime(dt_start)
@@ -105,27 +104,20 @@ def get_rise_set(ts, dt, body, include_date=False):
     for t_val, e_val in zip(times, events):
         local_time = t_val.utc_datetime().replace(tzinfo=utc_tz).astimezone(oman_tz)
         diff_sec = abs((local_time - dt_local).total_seconds())
-        # قبول الحدث إذا كان ضمن نافذة معينة (نستخدم 13 ساعة للشروق و12 ساعة للغروب مؤقتاً)
         if e_val == 1 and diff_sec <= 13 * 3600:
             sunrise_events.append(local_time)
         elif e_val == 0 and diff_sec <= 12 * 3600:
             sunset_events.append(local_time)
     
-    # اختيار الشروق: نختار الحدث الأقرب للوقت المختار من قائمة الشروق
     if sunrise_events:
         sunrise_time = min(sunrise_events, key=lambda t: abs((t - dt_local).total_seconds()))
     else:
-        # في حالة عدم العثور على شروق ضمن النافذة، نستخدم أقرب شروق من جميع الأحداث
         all_rising = [t_val.utc_datetime().replace(tzinfo=utc_tz).astimezone(oman_tz)
                       for t_val, e_val in zip(times, events) if e_val == 1]
         sunrise_time = min(all_rising, key=lambda t: abs((t - dt_local).total_seconds())) if all_rising else None
 
-    # اختيار الغروب:
-    # إذا وُجد شروق، نفلتر أحداث الغروب بحيث تكون بعد الشروق.
     if sunrise_time:
         valid_sunset = [t for t in sunset_events if t > sunrise_time]
-        # إذا كان لدينا أكثر من حدث، نختار الحدث الذي يقع بعد dt_local (أي الحدث القادم)؛
-        # وفي حال لم يكن dt_local قبل أي غروب، نختار الحدث الأقرب.
         if valid_sunset:
             future_sunset = [t for t in valid_sunset if t >= dt_local]
             if future_sunset:
@@ -133,21 +125,16 @@ def get_rise_set(ts, dt, body, include_date=False):
             else:
                 sunset_time = min(valid_sunset, key=lambda t: abs((t - dt_local).total_seconds()))
         else:
-            # إذا لم يكن هناك غروب بعد الشروق ضمن النافذة، نبحث من بين جميع أحداث الغروب
             all_setting = [t_val.utc_datetime().replace(tzinfo=utc_tz).astimezone(oman_tz)
                            for t_val, e_val in zip(times, events) if e_val == 0]
             sunset_time = min(all_setting, key=lambda t: abs((t - dt_local).total_seconds())) if all_setting else None
     else:
-        # في حال لم يتوفر شروق، نستخدم الحدث الأقرب للغروب من جميع الأحداث
         all_setting = [t_val.utc_datetime().replace(tzinfo=utc_tz).astimezone(oman_tz)
                        for t_val, e_val in zip(times, events) if e_val == 0]
         sunset_time = min(all_setting, key=lambda t: abs((t - dt_local).total_seconds())) if all_setting else None
 
-    # تأكيد عدم اختيار غروب وقع قبل الشروق بفارق كبير (مثلاً أكثر من 3 ساعات)
     if sunrise_time and sunset_time:
         if (sunset_time - sunrise_time).total_seconds() < 3 * 3600:
-            # إذا كان الفارق أقل من 3 ساعات، نحاول البحث عن غروب لاحق
-            # نفلتر جميع أحداث الغروب التي تأتي بعد sunrise_time
             all_setting = [t_val.utc_datetime().replace(tzinfo=utc_tz).astimezone(oman_tz)
                            for t_val, e_val in zip(times, events) if e_val == 0 and t_val.utc_datetime().replace(tzinfo=utc_tz).astimezone(oman_tz) > sunrise_time]
             if all_setting:
@@ -155,7 +142,6 @@ def get_rise_set(ts, dt, body, include_date=False):
     
     fmt = "%d/%m/%Y %I:%M %p" if include_date else "%I:%M %p"
     
-    # تنسيق الشروق مع تعديل حالة منتصف الليل
     if sunrise_time:
         if include_date and sunrise_time.hour == 0:
             sunrise_str = (sunrise_time + datetime.timedelta(days=1)).strftime(fmt)
@@ -164,7 +150,6 @@ def get_rise_set(ts, dt, body, include_date=False):
     else:
         sunrise_str = dt_local.strftime(fmt)
     
-    # تنسيق الغروب مع تعديل حالة منتصف الليل
     if sunset_time:
         if include_date and sunset_time.hour == 0:
             sunset_str = (sunset_time + datetime.timedelta(days=1)).strftime(fmt)
@@ -173,12 +158,10 @@ def get_rise_set(ts, dt, body, include_date=False):
     else:
         sunset_str = dt_local.strftime(fmt)
     
-    # استبدال AM بـ "ص" وPM بـ "م"
     sunrise_str = sunrise_str.replace("AM", "ص").replace("PM", "م")
     sunset_str = sunset_str.replace("AM", "ص").replace("PM", "م")
     
     return sunrise_str, sunset_str
-
 
 def hex_to_rgba(hex_str, alpha=1.0):
     hex_str = hex_str.lstrip('#')
@@ -348,7 +331,6 @@ class MoonContent(BoxLayout):
         az_deg = az.degrees
 
         rise_str, set_str = get_rise_set(ts, dt, moon, include_date=True)
-        # تحويل AM إلى ص و PM إلى م
         rise_str = rise_str.replace("AM", "ص").replace("PM", "م")
         set_str = set_str.replace("AM", "ص").replace("PM", "م")
         
@@ -371,11 +353,10 @@ class PlanetItem(BoxLayout):
         self.size_hint_y = None
         self.height = 200
         with self.canvas.before:
-            Color(0, 0, 1, 1)
+            Color(1, 1, 1, 1)
             self.rect = Line(rectangle=(self.x, self.y, self.width, self.height), width=1)
         self.bind(pos=self.update_rect, size=self.update_rect)
         
-        # تحويل AM إلى "ص" و PM إلى "م" قبل الاستخدام
         rise_str = rise_str.replace("AM", "ص").replace("PM", "م")
         set_str = set_str.replace("AM", "ص").replace("PM", "م")
         
@@ -408,7 +389,7 @@ class PlanetItem(BoxLayout):
         self.add_widget(aa_label)
         
     def update_rect(self, *args):
-        self.rect.rectangle = (self.x, self.y, self.width, self.height)
+        self.rect.rectangle = (self.x + 5, self.y, self.width - 10, self.height)
 
 class PlanetsContent(BoxLayout):
     def __init__(self, dt, **kwargs):
@@ -430,12 +411,12 @@ class PlanetsContent(BoxLayout):
         observer = eph['earth'] + location
 
         planets = {
-            'mercury': 'عطارد',
             'venus': 'الزهرة',
-            'mars': 'المريخ',
+            'mercury': 'عطارد',
             'JUPITER BARYCENTER': 'المشتري',
-            'SATURN BARYCENTER': 'زحل',
+            'mars': 'المريخ',
             'Uranus BARYCENTER': 'أورانوس',
+            'SATURN BARYCENTER': 'زحل',
             'Neptune BARYCENTER': 'نبتون'
         }
         image_map = {
@@ -520,7 +501,7 @@ class MapContent(BoxLayout):
             }
 
             fig, ax = plt.subplots(figsize=(8, 8))
-            bg_color = 'black'
+            bg_color = '#300544'
             fig.patch.set_facecolor(bg_color)
             ax.set_facecolor(bg_color)
             ax.set_xlim(-1.2, 1.2)
@@ -599,41 +580,52 @@ class ValueAdjuster(BoxLayout):
         self.on_rollover = on_rollover
 
         self.up_button = Button(
-            text="^", size_hint=(1, None), height=15
+            size_hint=(1, None),
+            size=(20, 20),
+            background_normal='planetimg/up-arrow.png',
+            background_down='planetimg/up-arrow.png',
+            border=(0, 0, 0, 0)
         )
         self.up_button.bind(on_release=self.increment)
         self.add_widget(self.up_button)
+        font_size_value = 20
+        widget_height = 40
+        vertical_padding = (widget_height - font_size_value) / 2
 
-        self.value_input = TextInput(
-            text=str(self.current_value),
-            size_hint=(1, None), height=40,
-            halign='center', multiline=False
+        self.value_label = Label(
+            text=process_text(str(self.current_value)),
+            font_size='18sp',
+            size_hint=(1, None),
+            height=40,
+            halign='center',
+            valign='middle',
+            color=(1, 1, 1, 1)
         )
-        self.value_input.bind(on_text_validate=self.on_text_validate)
-        self.value_input.bind(focus=self.on_focus)
-        self.add_widget(self.value_input)
+        self.value_label.bind(size=lambda inst, value: setattr(inst, 'text_size', value))
+        self.value_label.bind(on_text_validate=self.on_text_validate)
+        self.add_widget(self.value_label)
 
         self.down_button = Button(
-            text="ˇ", size_hint=(1, None), height=15
+            size_hint=(1, None),
+            size=(20, 20),
+            background_normal='planetimg/down-arrow.png',
+            background_down='planetimg/down-arrow.png',
+            border=(0, 0, 0, 0)
         )
         self.down_button.bind(on_release=self.decrement)
         self.add_widget(self.down_button)
 
     def update_display(self):
-        self.value_input.text = str(self.current_value)
+        self.value_label.text = str(self.current_value)
 
     def on_text_validate(self, instance):
         self.validate_and_update(instance.text)
-
-    def on_focus(self, instance, value):
-        if not value:
-            self.validate_and_update(instance.text)
 
     def validate_and_update(self, text):
         try:
             value = int(text)
         except ValueError:
-            self.value_input.text = str(self.current_value)
+            self.value_label.text = str(self.current_value)
             return
         if value < self.min_value:
             value = self.min_value
@@ -686,23 +678,33 @@ class PeriodAdjuster(BoxLayout):
         self.on_value_change = on_value_change
 
         self.up_button = Button(
-            text="^", size_hint=(1, None), height=15
+            size_hint=(1, None),
+            size=(20, 20),
+            background_normal='planetimg/up-arrow.png',
+            background_down='planetimg/up-arrow.png',
+            border=(0, 0, 0, 0)
         )
         self.up_button.bind(on_release=self.toggle)
         self.add_widget(self.up_button)
 
         self.value_label = Label(
             text=process_text(self.current_period),
-            size_hint=(1, None), height=40,
-            halign='center', valign='middle'
+            font_size='18sp',
+            size_hint=(1, None),
+            height=40,
+            halign='center',
+            valign='middle',
+            color=(1, 1, 1, 1)
         )
-        self.value_label.bind(
-            size=lambda inst, val: setattr(inst, 'text_size', (self.value_label.width, None))
-        )
+        self.value_label.bind(size=lambda inst, value: setattr(inst, 'text_size', value))
         self.add_widget(self.value_label)
 
         self.down_button = Button(
-            text="ˇ", size_hint=(1, None), height=15
+            size_hint=(1, None),
+            size=(20, 20),
+            background_normal='planetimg/down-arrow.png',
+            background_down='planetimg/down-arrow.png',
+            border=(0, 0, 0, 0)
         )
         self.down_button.bind(on_release=self.toggle)
         self.add_widget(self.down_button)
@@ -720,6 +722,11 @@ class DateAdjusterGroup(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = "horizontal"
         self.spacing = 0
+
+        with self.canvas.before:
+            Color(*hex_to_rgba("#300544"))
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_bg, size=self.update_bg)
 
         today = datetime.date.today()
         self.current_date = today
@@ -741,10 +748,20 @@ class DateAdjusterGroup(BoxLayout):
             rollover=True,
             on_rollover=self.day_rollover
         )
+        self.year_adjuster.value_label.foreground_color = (1, 1, 1, 1)
+        self.month_adjuster.value_label.foreground_color = (1, 1, 1, 1)
+        self.day_adjuster.value_label.foreground_color = (1, 1, 1, 1)
+        self.year_adjuster.value_label.background_color = hex_to_rgba("#300544")
+        self.month_adjuster.value_label.background_color = hex_to_rgba("#300544")
+        self.day_adjuster.value_label.background_color = hex_to_rgba("#300544")
 
         self.add_widget(self.year_adjuster)
         self.add_widget(self.month_adjuster)
         self.add_widget(self.day_adjuster)
+    
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
 
     def day_rollover(self, direction):
         if direction == 'increment':
@@ -755,7 +772,6 @@ class DateAdjusterGroup(BoxLayout):
                 self.year_adjuster.update_display()
             self.month_adjuster.current_value = new_month
             self.month_adjuster.update_display()
-
         elif direction == 'decrement':
             new_month = self.month_adjuster.current_value - 1
             if new_month < 1:
@@ -856,6 +872,11 @@ class TimeAdjusterGroup(BoxLayout):
         self.orientation = "horizontal"
         self.spacing = 0
 
+        with self.canvas.before:
+            Color(*hex_to_rgba("#300544"))
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_bg, size=self.update_bg)
+
         now = datetime.datetime.now()
         hour_24 = now.hour
         if hour_24 == 0:
@@ -884,10 +905,19 @@ class TimeAdjusterGroup(BoxLayout):
             rollover=True,
             on_rollover=self.hour_rollover
         )
-
+        self.period_adjuster.value_label.color = (1, 1, 1, 1)
+        self.period_adjuster.value_label.background_color = hex_to_rgba("#300544")
+        self.hour_adjuster.value_label.background_color = hex_to_rgba("#300544")
+        self.hour_adjuster.value_label.foreground_color = (1, 1, 1, 1)
+        self.minute_adjuster.value_label.background_color = hex_to_rgba("#300544")
+        self.minute_adjuster.value_label.foreground_color = (1, 1, 1, 1)
         self.add_widget(self.period_adjuster)
         self.add_widget(self.hour_adjuster)
         self.add_widget(self.minute_adjuster)
+   
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
 
     def minute_rollover(self, direction):
         if direction == 'increment':
@@ -939,45 +969,79 @@ class TimeAdjusterGroup(BoxLayout):
 
 # -------------------------------------------------------------------
 # Popup لاختيار الموقع
+
+
+
+class CustomSpinnerOption(SpinnerOption):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.background_normal = ''
+        self.background_color = hex_to_rgba("#55117e")
+        self.color = (1, 1, 1, 1)
+
+class CustomDropDown(DropDown):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # تحديد أقصى ارتفاع للقائمة، وعند تجاوزها يظهر شريط التمرير
+        self.max_height = 300
 class LocationPopup(Popup):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.title = process_text("اختر الموقع")
         self.size_hint = (0.8, 0.4)
-        # ربط on_dismiss لتحديث الحسابات عند إغلاق النافذة
+        self.auto_dismiss = False
         self.bind(on_dismiss=self.on_popup_dismiss)
 
-        # نسخ مفاتيح المواقع (مثلاً: ["مسقط", "صلالة", ...])
+        # تعيين خلفية النافذة باستخدام الخاصيتين background و background_color
+        self.background = ''
+        self.background_color = hex_to_rgba("#2b113a")
+        with self.canvas.before:
+            Color(*hex_to_rgba("#2b113a"))
+            self.rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_rect, size=self.update_rect)
+
         self.location_keys = list(OMAN_LOCATIONS.keys())
         self.location_texts = [process_text(k) for k in self.location_keys]
 
-        content_box = BoxLayout(orientation="vertical", spacing=10, padding=10)
-        # Spinner لإظهار المواقع
+        content_box = BoxLayout(orientation="vertical", spacing=10, padding=20)
+        
+        # إنشاء Spinner مع تخصيص قائمة الخيارات باستخدام CustomSpinnerOption و CustomDropDown
         self.spinner = Spinner(
             text=process_text("اختر"),
             values=self.location_texts,
             font_size='16sp',
             font_name="fonts/Amiri-Regular.ttf",
             size_hint=(1, None),
-            height=44
+            height=44,
+            background_normal='',
+            background_color=hex_to_rgba("#410a63"),
+            color=(1, 1, 1, 1),
+            option_cls=CustomSpinnerOption,
+            dropdown_cls=CustomDropDown,
         )
         self.spinner.bind(text=self.on_select_location)
         content_box.add_widget(self.spinner)
 
-        # زر إغلاق
         close_btn = Button(
             text=process_text("إغلاق"),
             size_hint=(1, None),
             height=44,
-            font_name="fonts/Amiri-Regular.ttf"
+            font_size='16sp',
+            font_name="fonts/Amiri-Regular.ttf",
+            background_normal='',
+            background_color=hex_to_rgba("#410a63"),
+            color=(1, 1, 1, 1)
         )
         close_btn.bind(on_release=lambda x: self.dismiss())
         content_box.add_widget(close_btn)
 
         self.add_widget(content_box)
 
+    def update_rect(self, *args):
+        self.rect.pos = self.pos
+        self.rect.size = self.size
+
     def on_open(self):
-        # منع تفعيل on_select_location عند تعيين النص برمجياً
         self.spinner.unbind(text=self.on_select_location)
         app = App.get_running_app()
         current_location = getattr(app, "current_location_name", "مسقط")
@@ -987,11 +1051,9 @@ class LocationPopup(Popup):
             self.spinner.text = shaped_loc
         else:
             self.spinner.text = process_text("اختر")
-        # إعادة ربط الحدث بعد تعيين النص
         self.spinner.bind(text=self.on_select_location)
 
     def on_select_location(self, spinner, shaped_text):
-        # إذا كانت القيمة "اختر"، لا نقوم بأي شيء
         if shaped_text == process_text("اختر"):
             return
         idx = self.location_texts.index(shaped_text)
@@ -999,42 +1061,40 @@ class LocationPopup(Popup):
         app = App.get_running_app()
         app.current_location_name = actual_location
         app.save_location_preference()
-        # تحديث العرض فور تغيير الإحداثيات
-        if app.root and hasattr(app.root, 'update_current_content'):
-            dt = app.root.options_widget.dt_adjuster.get_datetime()
-            app.root.update_current_content(dt)
+        current_dt = (
+            app.root.options_widget.dt_adjuster.get_datetime()
+            if hasattr(app.root, 'options_widget')
+            else datetime.datetime.now(pytz.timezone('Asia/Muscat'))
+        )
+        update_all_screens(current_dt)
         self.dismiss()
 
     def on_popup_dismiss(self, instance):
-        # عند إغلاق النافذة (سواء عن طريق زر "إغلاق" أو عند الاختيار)
         app = App.get_running_app()
         if app.root and hasattr(app.root, 'update_current_content'):
             dt = app.root.options_widget.dt_adjuster.get_datetime()
             app.root.update_current_content(dt)
+
 
 # -------------------------------------------------------------------
 # أداة ضبط التاريخ والوقت مع زرين بجانب بعض: أيقونة "الوقت الحالي" + زر الموقع
 class CombinedDateTimeAdjuster(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        with self.canvas.before:
+            Color(*hex_to_rgba("#300544"))  
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_bg, size=self.update_bg)        
         self.orientation = "horizontal"
-        self.spacing = 10
+        self.spacing = 5
         self.datetime_change_callback = None
 
-        # الصندوق العلوي الذي يحوي زرين جنبًا إلى جنب
         top_btns_box = BoxLayout(orientation="horizontal", size_hint=(None, None), height=70)
-        top_btns_box.width = 100  # مثلاً 70+70 لكل زر
+        top_btns_box.width = 100
 
-        
-
-        # إنشاء AnchorLayout لتوسيط الزر
         anchor = AnchorLayout(size_hint=(None, 1), width=50, anchor_y='center')
-
-        # إذا كان self.location_button موجود مسبقاً ويحتوي على والد، قم بإزالته
         if hasattr(self, 'location_button') and self.location_button.parent:
             self.location_button.parent.remove_widget(self.location_button)
-
-        # إنشاء زر الموقع
         self.location_button = Button(
             size_hint=(None, None), size=(50, 50),
             background_normal='planetimg/location.png',
@@ -1042,45 +1102,32 @@ class CombinedDateTimeAdjuster(BoxLayout):
             border=(0, 0, 0, 0)
         )
         self.location_button.bind(on_release=self.open_location_popup)
-
-        # إضافة الزر إلى AnchorLayout
         anchor.add_widget(self.location_button)
-        
-        # إضافة AnchorLayout إلى top_btns_box
         top_btns_box.add_widget(anchor)
 
-
-        # إنشاء AnchorLayout لتوسيط زر إعادة الضبط عموديًا
         anchor_reset = AnchorLayout(size_hint=(None, 1), width=50, anchor_y='center')
-
-        # إنشاء زر أيقونة الوقت الحالي
         self.reset_button = Button(
             size_hint=(None, None),
-            size=(50, 50),  # أو الحجم المناسب لأبعاد الصورة
+            size=(50, 50),
             border=(0, 0, 0, 0),
             background_normal='planetimg/redo.png',
             background_down='planetimg/redo.png'
         )
-
         self.reset_button.bind(on_release=self.reset_to_now)
-
-        # إضافة الزر إلى AnchorLayout
         anchor_reset.add_widget(self.reset_button)
-
-        # إضافة AnchorLayout إلى top_btns_box بدلاً من الزر مباشرةً
         top_btns_box.add_widget(anchor_reset)
-
-
-
 
         self.add_widget(top_btns_box)
 
-        # باقي الأدوات: (DateAdjusterGroup) + (TimeAdjusterGroup)
         self.date_group = DateAdjusterGroup()
         self.time_group = TimeAdjusterGroup()
 
         self.add_widget(self.date_group)
         self.add_widget(self.time_group)
+
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
 
     def open_location_popup(self, instance):
         loc_popup = LocationPopup()
@@ -1163,48 +1210,182 @@ class CombinedDateTimeAdjuster(BoxLayout):
         self.on_datetime_change()
 
 # -------------------------------------------------------------------
-# صفحة رئيسية (مثال)
+# الصفحة الرئيسية
 class HomeContent(BoxLayout):
-    def __init__(self, **kwargs):
+    def __init__(self, dt, **kwargs):
         super().__init__(**kwargs)
+        self.dt = dt
         self.orientation = "vertical"
-        self.spacing = 10
-        self.padding = [10, 10]
+        self.spacing = 15
+        self.padding = [10, 10, 10, 10]
         self.size_hint_y = None
         self.bind(minimum_height=self.setter('height'))
 
-        title = Label(
-            text=process_text("مرحباً بك في عالم الفلك!"),
+        welcome_label = Label(
+            text=process_text("مرحباً بك"),
             font_size='20sp',
-            font_name='fonts/Amiri-Regular.ttf',
-            halign='center',
-            valign='middle',
+            font_name="fonts/Amiri-Regular.ttf",
+            halign="center",
+            valign="middle",
             size_hint_y=None,
-            height=50
+            height=40
         )
-        title.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
-        self.add_widget(title)
+        welcome_label.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
+        self.add_widget(welcome_label)
 
-        info_label = Label(
-            text=process_text(
-                "يقول كارل ساغان:\n"
-                "«نحن مكوَّنون من نجوم،\n"
-                "فكيف لا نتطلّع إليها؟»"
-            ),
+        phrases = [
+            "الفلك مفتاح الكون",
+            "كلنا نجوم",
+            "انظر إلى السماء وارتقب المعجزات",
+            "الكون واسع ومليء بالأسرار"
+        ]
+        random_phrase = random.choice(phrases)
+        random_label = Label(
+            text=process_text(random_phrase),
             font_size='16sp',
-            font_name='fonts/Amiri-Regular.ttf',
-            halign='center',
-            valign='middle',
-            size_hint_y=None
+            font_name="fonts/Amiri-Regular.ttf",
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=40
         )
-        info_label.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
-        info_label.bind(texture_size=lambda inst, val: setattr(inst, 'height', val[1]))
-        self.add_widget(info_label)
+        random_label.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
+        self.add_widget(random_label)
+
+        self.location_label = Label(
+            text="",
+            font_size='16sp',
+            font_name="fonts/Amiri-Regular.ttf",
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=40
+        )
+        self.location_label.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
+        self.add_widget(self.location_label)
+
+        self.moon_phase_box = BoxLayout(orientation="horizontal", size_hint_y=None, height=40, spacing=5)
+        self.phase_label = Label(
+            text="",
+            font_size='18sp',
+            font_name="fonts/Amiri-Regular.ttf",
+            halign="right",
+            valign="middle"
+        )
+        self.phase_label.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
+        self.moon_phase_box.add_widget(self.phase_label)
+        phase_title_label = Label(
+            text=process_text("طور القمر الحالي:"),
+            font_size='18sp',
+            font_name="fonts/Amiri-Regular.ttf",
+            halign="left",
+            valign="middle",
+            size_hint_x=None,
+            width=220
+        )
+        phase_title_label.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
+        self.moon_phase_box.add_widget(phase_title_label)
+        self.add_widget(self.moon_phase_box)
+
+        bodies_title = Label(
+            text=process_text("أجرام النظام الشمسي الظاهرة في السماء في الوقت المحدد:"),
+            font_size='16sp',
+            font_name="fonts/Amiri-Regular.ttf",
+            halign="center",
+            valign="middle",
+            size_hint_y=None,
+            height=40
+        )
+        bodies_title.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
+        self.add_widget(bodies_title)
+
+        self.bodies_box = GridLayout(cols=4, spacing=10, size_hint_y=None)
+        self.bodies_box.bind(minimum_height=self.bodies_box.setter('height'))
+        self.add_widget(self.bodies_box)
+
+        self.update_content(dt)
+
+    def update_content(self, dt):
+        self.dt = dt
+        loc = getattr(App.get_running_app(), "current_location_name", "مسقط")
+        date_str = dt.strftime("%d/%m/%Y")
+        time_str = dt.strftime("%I:%M %p").replace("AM", "ص").replace("PM", "م")
+        self.location_label.text = process_text(f"الموقع: {loc} | التاريخ: {date_str} | الوقت: {time_str}")
+
+        oman_tz = pytz.timezone('Asia/Muscat')
+        dt_local = dt if dt.tzinfo else oman_tz.localize(dt)
+        dt_utc = dt_local.astimezone(pytz.UTC)
+        t = ts.from_datetime(dt_utc)
+        location = get_current_location()
+        observer = eph['earth'] + location
+
+        phase_angle = almanac.moon_phase(eph, t).degrees
+        waxing = True if phase_angle < 180 else False
+        phase_name = get_moon_phase_name(phase_angle, waxing)
+        phase_ar_map = {
+            "New Moon": "قمر جديد",
+            "Waxing Crescent": "الهلال متزايد",
+            "First Quarter": "التربيع الأول",
+            "Waxing Gibbous": "الأحدب المتزايد",
+            "Full Moon": "البدر",
+            "Waning Gibbous": "أحدب متناقص",
+            "Last Quarter": "التربيع الأخير",
+            "Waning Crescent": "الهلال المتناقص",
+            "Unknown": "غير معروف"
+        }
+        phase_name_ar = phase_ar_map.get(phase_name, phase_name)
+        self.phase_label.text = process_text(phase_name_ar)
+
+        bodies = {
+            'Neptune BARYCENTER': 'نبتون',
+            'Uranus BARYCENTER': 'أورانوس',
+            'SATURN BARYCENTER': 'زحل',
+            'JUPITER BARYCENTER': 'المشتري',
+            'mars': 'المريخ',
+            'venus': 'الزهرة',
+            'mercury': 'عطارد',
+            'moon': 'القمر',
+            'sun': 'الشمس',
+        }
+        visible_bodies = []
+        for key, arabic_name in bodies.items():
+            try:
+                body = eph[key]
+            except Exception:
+                continue
+            astrometric = observer.at(t).observe(body).apparent()
+            alt, _, _ = astrometric.altaz()
+            if alt.degrees > 0:
+                visible_bodies.append(arabic_name)
+        self.bodies_box.clear_widgets()
+        if visible_bodies:
+            for name in visible_bodies:
+                lbl = Label(
+                    text=process_text(name),
+                    font_size='16sp',
+                    font_name="fonts/Amiri-Regular.ttf",
+                    halign="left",
+                    valign="top",
+                    size_hint=(None, None),
+                    size=(100, 30)
+                )
+                lbl.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
+                self.bodies_box.add_widget(lbl)
+        else:
+            lbl = Label(
+                text=process_text("لا توجد أجرام ظاهرة"),
+                font_size='16sp',
+                font_name="fonts/Amiri-Regular.ttf",
+                halign="center",
+                valign="middle"
+            )
+            lbl.bind(size=lambda inst, val: setattr(inst, 'text_size', (val[0], None)))
+            self.bodies_box.add_widget(lbl)
 
 # -------------------------------------------------------------------
 # شريط القائمة السفلية
 class MenuWidget(BoxLayout):
-    def __init__(self, content_area, **kwargs):
+    def __init__(self, content_area=None, **kwargs):
         super().__init__(**kwargs)
         self.content_area = content_area
         self.orientation = 'horizontal'
@@ -1212,17 +1393,30 @@ class MenuWidget(BoxLayout):
         self.size_hint_y = None
         self.height = 50
 
+        with self.canvas.before:
+            Color(*hex_to_rgba("#300544"))
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_bg, size=self.update_bg)
+
         sections = ["الخريطة", "القمر", "الكواكب", "الرئيسية"]
         for section in sections:
             btn = Button(
                 text=process_text(section),
                 font_name="fonts/Amiri-Regular.ttf",
-                font_size='18sp'
+                font_size='18sp',
+                background_normal='',
+                background_color=hex_to_rgba("#521876"),
+                color=(1, 1, 1, 1)
             )
             btn.bind(on_release=self.menu_pressed)
             self.add_widget(btn)
 
         self.options_widget = None
+        self.preloaded_map = None
+
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
 
     def menu_pressed(self, instance):
         dt_group = self.options_widget.dt_adjuster
@@ -1234,9 +1428,14 @@ class MenuWidget(BoxLayout):
         elif text == process_text("القمر"):
             self.content_area.set_content(MoonContent(dt=dt_full))
         elif text == process_text("الخريطة"):
-            self.content_area.set_content(MapContent(dt=dt_full))
+            if self.preloaded_map:
+                self.preloaded_map.update_content(dt_full)
+                self.content_area.set_content(self.preloaded_map)
+            else:
+                self.content_area.set_content(MapContent(dt=dt_full))
         elif text == process_text("الرئيسية"):
-            self.content_area.set_content(HomeContent())
+            dt_full = self.options_widget.dt_adjuster.get_datetime()
+            self.content_area.set_content(HomeContent(dt=dt_full))
 
 # -------------------------------------------------------------------
 # رأس الصفحة
@@ -1247,7 +1446,7 @@ class HeaderWidget(BoxLayout):
         self.height = 100
         self.orientation = 'vertical'
         with self.canvas.before:
-            Color(0.9, 0.9, 0.9, 1)
+            Color(*hex_to_rgba("#50106e"))
             self.rect = Rectangle(pos=self.pos, size=self.size)
         self.bind(pos=self.update_rect, size=self.update_rect)
 
@@ -1257,7 +1456,8 @@ class HeaderWidget(BoxLayout):
             halign='center',
             valign='middle',
             font_name="fonts/Amiri-Regular.ttf",
-            size_hint=(1,1)
+            size_hint=(1,1),
+            color=(1, 1,1, 1)
         )
         header_label.bind(size=lambda inst, val: setattr(inst, 'text_size', val))
         self.add_widget(header_label)
@@ -1272,9 +1472,17 @@ class ContentArea(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = "vertical"
-        self.spacing = 5
+        self.spacing = 10
         self.size_hint_y = None
         self.bind(minimum_height=self.setter('height'))
+        with self.canvas.before:
+            Color(*hex_to_rgba("#300544"))
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_bg, size=self.update_bg)
+
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
 
     def set_content(self, widget):
         self.clear_widgets()
@@ -1293,15 +1501,14 @@ class OptionsWidget(BoxLayout):
         self.add_widget(self.dt_adjuster)
 
 # -------------------------------------------------------------------
-# الواجهة الرئيسية
+# التطبيق الرئيسي
 class MainWidget(BoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
-        self.spacing = 0
+        self.spacing = 15
 
         header_area = BoxLayout(orientation='vertical', spacing=10, size_hint_y=None, height=100+80+50)
-
         header_area.add_widget(HeaderWidget())
         self.options_widget = OptionsWidget()
         header_area.add_widget(self.options_widget)
@@ -1319,11 +1526,29 @@ class MainWidget(BoxLayout):
         self.menu.options_widget = self.options_widget
         self.menu.content_area = self.content_area
 
-        # عند تغيّر التاريخ/الوقت
         self.options_widget.dt_adjuster.datetime_change_callback = self.update_current_content
 
-        # بدءاً من الصفحة الرئيسية
-        self.content_area.set_content(HomeContent())
+        dt_full = self.options_widget.dt_adjuster.get_datetime()
+        self.content_area.set_content(HomeContent(dt=dt_full))
+
+        self.preloaded_map = None
+        self.menu.preloaded_map = None
+
+        Clock.schedule_once(lambda dt: self.preload_map(), 1)
+
+        with self.canvas.before:
+            Color(*hex_to_rgba("#300544"))
+            self.bg_rect = Rectangle(pos=self.pos, size=self.size)
+        self.bind(pos=self.update_bg, size=self.update_bg)
+
+    def preload_map(self):
+        dt_current = self.options_widget.dt_adjuster.get_datetime()
+        self.preloaded_map = MapContent(dt_current)
+        self.menu.preloaded_map = self.preloaded_map
+
+    def update_bg(self, *args):
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
 
     def update_current_content(self, new_dt):
         if self.content_area.children:
@@ -1332,11 +1557,15 @@ class MainWidget(BoxLayout):
                 widget.update_content(new_dt)
 
 # -------------------------------------------------------------------
-# استخدام ScreenManager لو أحببت
+# تعديل MainScreen ليحتوي على دالة update_content لتحديث جميع الشاشات
 class MainScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.add_widget(MainWidget())
+        self.main_widget = MainWidget()
+        self.add_widget(self.main_widget)
+    
+    def update_content(self, new_dt):
+        self.main_widget.update_current_content(new_dt)
 
 class PlanetsScreen(Screen):
     def __init__(self, **kwargs):
@@ -1353,7 +1582,8 @@ class PlanetsScreen(Screen):
         header.bind(size=lambda inst, val: setattr(inst, 'text_size', val))
         layout.add_widget(header)
 
-        layout.add_widget(PlanetsContent(dt=datetime.datetime.now(pytz.timezone('Asia/Muscat'))))
+        self.planets_content = PlanetsContent(dt=datetime.datetime.now(pytz.timezone('Asia/Muscat')))
+        layout.add_widget(self.planets_content)
 
         back_button = Button(
             text=process_text("عودة"),
@@ -1368,9 +1598,29 @@ class PlanetsScreen(Screen):
 
     def go_back(self, instance):
         self.manager.current = 'main'
+    
+    def update_content(self, new_dt):
+        self.planets_content.update_content(new_dt)
 
 class MyScreenManager(ScreenManager):
     pass
+
+# -------------------------------------------------------------------
+# دالة لتحديث جميع الشاشات عند تغيير الموقع أو التاريخ/الوقت
+def update_all_screens(new_dt):
+    app = App.get_running_app()
+    sm = app.root  # ScreenManager
+    for screen in sm.screens:
+        if hasattr(screen, 'update_content'):
+            screen.update_content(new_dt)
+        elif hasattr(screen, 'update_current_content'):
+            screen.update_current_content(new_dt)
+        else:
+            for child in screen.children:
+                if hasattr(child, 'update_content'):
+                    child.update_content(new_dt)
+                elif hasattr(child, 'update_current_content'):
+                    child.update_current_content(new_dt)
 
 # -------------------------------------------------------------------
 # التطبيق الأساسي
