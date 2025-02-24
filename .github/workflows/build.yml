@@ -14,7 +14,7 @@ jobs:
     env:
       JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-      PATH: ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin:${{ github.workspace }}/android-sdk/platform-tools:${{ github.workspace }}/android-sdk/build-tools/29.0.3:$PATH
+      PATH: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin:${{ github.workspace }}/android-sdk/platform-tools:${{ github.workspace }}/android-sdk/build-tools/29.0.3
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
