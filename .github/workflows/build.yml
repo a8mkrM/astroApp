@@ -13,6 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
+      # سيتم تثبيت Android SDK في مجلد داخل مساحة العمل
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+      # تحديث PATH ليشمل أدوات SDK
+      PATH: ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin:${{ github.workspace }}/android-sdk/platform-tools:${{ github.workspace }}/android-sdk/build-tools/29.0.3:$PATH
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -43,7 +47,24 @@ jobs:
             liblzma-dev \
             zlib1g-dev \
             libsqlite3-dev \
-            libreadline-dev
+            libreadline-dev \
+            wget
+
+      - name: Download Android SDK Command Line Tools
+        run: |
+          mkdir -p ${{ github.workspace }}/android-sdk
+          cd ${{ github.workspace }}/android-sdk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/* cmdline-tools/latest/
+          rm cmdline-tools.zip
+
+      - name: Install Android SDK Packages
+        run: |
+          # قبول التراخيص وتثبيت الحزم المطلوبة
+          yes | ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=${{ github.workspace }}/android-sdk --licenses
+          ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=${{ github.workspace }}/android-sdk "platform-tools" "platforms;android-29" "build-tools;29.0.3"
 
       - name: Upgrade pip and Install Buildozer
         run: |
