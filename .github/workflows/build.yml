@@ -1,58 +1,61 @@
-name: Build Kivy APK
+name: Build APK
 
 on:
   push:
     branches:
-      - main # أو اسم الفرع الرئيسي لديك
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    env:
+      JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      - name: Install dependencies
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'
+
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git zip openjdk-11-jdk python3 python3-pip virtualenv android-sdk android-sdk-platform-tools android-tools-adb
-          pip3 install cython==0.29.32 buildozer
+          sudo apt-get install -y \
+            openjdk-8-jdk \
+            python3-pip \
+            python3-dev \
+            build-essential \
+            git \
+            zip \
+            unzip \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            libffi-dev \
+            libssl-dev \
+            libncurses5-dev \
+            liblzma-dev \
+            zlib1g-dev \
+            libsqlite3-dev \
+            libreadline-dev
 
-      - name: Download and Extract Android SDK Command-line Tools
+      - name: Upgrade pip and Install Buildozer
         run: |
-          export ANDROID_HOME=$HOME/android-sdk
-          mkdir -p $ANDROID_HOME
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip -d $ANDROID_HOME
-          # Find the extracted folder and move its content to latest
-          extracted_folder=$(find $ANDROID_HOME -maxdepth 1 -type d -name "cmdline-tools*" | sort | tail -n 1)
-          if [ -n "$extracted_folder" ]; then
-            mv "$extracted_folder"/* "$ANDROID_HOME/cmdline-tools"
-            mkdir "$ANDROID_HOME/cmdline-tools/latest"
-            mv "$ANDROID_HOME/cmdline-tools/"* "$ANDROID_HOME/cmdline-tools/latest"
-            rmdir "$ANDROID_HOME/cmdline-tools"
-          else
-            echo "Error: Extracted cmdline-tools folder not found."
-            exit 1
-          fi
-          rm cmdline-tools.zip
+          pip install --upgrade pip
+          pip install cython==0.29.32
+          pip install buildozer
 
-      - name: Setup Android SDK
-        run: |
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/30.0.3:$PATH
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-30" "build-tools;30.0.3"
+      - name: Build APK with Buildozer
+        run: buildozer -v android debug
 
-      - name: Build APK
-        run: |
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/30.0.3:$PATH
-          buildozer android debug
-
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug.apk
-          path: bin/app-debug.apk
+          name: my-kivy-apk
+          path: bin/*.apk
