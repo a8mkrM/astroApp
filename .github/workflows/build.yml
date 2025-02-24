@@ -13,9 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JAVA_HOME: /usr/lib/jvm/java-8-openjdk-amd64
-      # سيتم تثبيت Android SDK في مجلد داخل مساحة العمل
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-      # تحديث PATH ليشمل أدوات SDK
       PATH: ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin:${{ github.workspace }}/android-sdk/platform-tools:${{ github.workspace }}/android-sdk/build-tools/29.0.3:$PATH
     steps:
       - name: Checkout Repository
@@ -30,6 +28,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            tar \
             openjdk-8-jdk \
             python3-pip \
             python3-dev \
@@ -62,7 +61,6 @@ jobs:
 
       - name: Install Android SDK Packages
         run: |
-          # قبول التراخيص وتثبيت الحزم المطلوبة
           yes | ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=${{ github.workspace }}/android-sdk --licenses
           ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=${{ github.workspace }}/android-sdk "platform-tools" "platforms;android-29" "build-tools;29.0.3"
 
