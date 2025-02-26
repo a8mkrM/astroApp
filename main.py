@@ -2,7 +2,6 @@ import math
 import datetime, calendar, os
 import pytz
 import numpy as np
-import matplotlib.pyplot as plt
 import random
 
 import arabic_reshaper
@@ -452,7 +451,120 @@ class PlanetsContent(BoxLayout):
 
 # -------------------------------------------------------------------
 # خريطة السماء
+class SkyMapWidget(Widget):
+    """
+    ودجت لرسم خريطة السماء باستخدام Kivy.
+    يقوم هذا الودجت برسم دائرة تمثل السماء، ويضع عليها علامات الاتجاه
+    وأماكن الأجرام السماوية مع تسميات مركزة.
+    """
+    dt = ObjectProperty(None)
+
+    def __init__(self, dt, **kwargs):
+        super().__init__(**kwargs)
+        self.dt = dt
+        self.bind(pos=self.update_map, size=self.update_map)
+        self.update_map()
+
+    def update_map(self, *args):
+        self.canvas.clear()
+        self.clear_widgets()
+
+        # إعداد القياسات الأساسية
+        margin = 20
+        radius = (min(self.width, self.height) - 2 * margin) / 2
+        center_x, center_y = self.center_x, self.center_y
+
+        with self.canvas:
+            # رسم خلفية الدائرة ولونها الداكن
+            Color(*hex_to_rgba("#0c0842"))
+            Ellipse(pos=(center_x - radius, center_y - radius), size=(2 * radius, 2 * radius))
+            # رسم حدود الدائرة البيضاء
+            Color(1, 1, 1, 1)
+            Line(circle=(center_x, center_y, radius), width=2)
+
+        # رسم علامات الاتجاه عند طرف الدائرة
+        directions = {"شمال": 0, "شرق": 90, "جنوب": 180, "غرب": 270}
+        dir_offset = 20  # مسافة إضافية لوضع النص خارج الدائرة
+        for dir_label, angle in directions.items():
+            rad = math.radians(angle)
+            x = center_x + math.cos(rad) * (radius + dir_offset)
+            y = center_y + math.sin(rad) * (radius + dir_offset)
+            lbl = Label(text=process_text(dir_label),
+                        font_size='14sp',
+                        color=(1, 1, 1, 1),
+                        size_hint=(None, None))
+            lbl.texture_update()
+            lbl_size = lbl.texture_size
+            lbl.size = lbl_size
+            # ضبط الموضع بحيث يكون النص مركزاً على النقطة المحسوبة
+            lbl.pos = (float(x) - lbl_size[0] / 2, float(y) - lbl_size[1] / 2)
+            self.add_widget(lbl)
+
+        # حساب مواقع الأجرام السماوية باستخدام Skyfield
+        oman_tz = pytz.timezone('Asia/Muscat')
+        dt_local = self.dt if self.dt.tzinfo else oman_tz.localize(self.dt)
+        dt_utc = dt_local.astimezone(pytz.UTC)
+        t = ts.from_datetime(dt_utc)
+        location = get_current_location()
+        observer = eph['earth'] + location
+
+        bodies = {
+            "الشمس": "sun",
+            "القمر": "moon",
+            "عطارد": "mercury",
+            "الزهرة": "venus",
+            "المريخ": "mars",
+            "المشتري": "JUPITER BARYCENTER",
+            "زحل": "SATURN BARYCENTER"
+        }
+        planet_colors = {
+            "الشمس":    "#FDB813",
+            "القمر":    "#CCCCCC",
+            "عطارد":   "#B1B1B1",
+            "الزهرة":  "#F7D358",
+            "المريخ":  "#FF4500",
+            "المشتري": "#FFA500",
+            "زحل":     "#D2B48C"
+        }
+
+        for name, key in bodies.items():
+            try:
+                body = eph[key]
+            except Exception:
+                continue
+            astrometric = observer.at(t).observe(body).apparent()
+            alt, az, _ = astrometric.altaz()
+            if alt.degrees < 0:
+                continue  # تجاهل الأجرام غير الظاهرة (تحت الأفق)
+
+            # حساب موقع الجسم داخل الدائرة؛ يُستخدم ارتفاع الجسم كنسبة تحدد بعد النقطة عن المركز
+            r_factor = (1 - alt.degrees / 90.0) * radius
+            rad_az = math.radians(az.degrees)
+            x = center_x + math.cos(rad_az) * r_factor
+            y = center_y + math.sin(rad_az) * r_factor
+
+            with self.canvas:
+                Color(*hex_to_rgba(planet_colors.get(name, "#FFFFFF")))
+                d = 10  # قطر علامة الجسم
+                Ellipse(pos=(float(x) - d/2, float(y) - d/2), size=(d, d))
+
+            # إضافة تسمية للجسم فوق العلامة
+            lbl = Label(text=process_text(name),
+                        font_size='12sp',
+                        color=(1, 1, 1, 1),
+                        size_hint=(None, None))
+            lbl.texture_update()
+            lbl_size = lbl.texture_size
+            lbl.size = lbl_size
+            # وضع التسمية فوق العلامة مع إزاحة بسيطة
+            lbl.pos = (float(x) - lbl_size[0] / 2, float(y) + d/2 + 2)
+            self.add_widget(lbl)
+
+
 class MapContent(BoxLayout):
+    """
+    ودجت لعرض خريطة السماء باستخدام SkyMapWidget بدلاً من matplotlib.
+    """
     def __init__(self, dt, **kwargs):
         super().__init__(**kwargs)
         self.orientation = "vertical"
@@ -460,103 +572,36 @@ class MapContent(BoxLayout):
         self.spacing = 10
         self.size_hint_y = None
         self.height = 400
+        self.dt = dt
         self.update_content(dt)
 
     def update_content(self, dt):
-        try:
-            oman_tz = pytz.timezone('Asia/Muscat')
-            dt_local = dt if dt.tzinfo else oman_tz.localize(dt)
-            dt_utc = dt_local.astimezone(pytz.UTC)
-            t = ts.from_datetime(dt_utc)
-            location = get_current_location()
-            observer = eph['earth'] + location
+        self.dt = dt
+        self.clear_widgets()
+        sky_map = SkyMapWidget(dt=dt)
+        self.add_widget(sky_map)
 
-            bodies = {
-                "الشمس": "sun",
-                "القمر": "moon",
-                "عطارد": "mercury",
-                "الزهرة": "venus",
-                "المريخ": "mars",
-                "المشتري": "JUPITER BARYCENTER",
-                "زحل": "SATURN BARYCENTER"
-            }
-            results = []
-            for name, key in bodies.items():
-                try:
-                    body = eph[key]
-                except Exception:
-                    continue
-                astrometric = observer.at(t).observe(body).apparent()
-                alt, az, _ = astrometric.altaz()
-                results.append({"name": name, "alt": alt.degrees, "az": az.degrees})
 
-            planet_colors = {
-                "الشمس":    "#FDB813",
-                "القمر":    "#CCCCCC",
-                "عطارد":   "#B1B1B1",
-                "الزهرة":  "#F7D358",
-                "المريخ":  "#FF4500",
-                "المشتري": "#FFA500",
-                "زحل":     "#D2B48C"
-            }
+class MapContent(BoxLayout):
+    """
+    ودجت لعرض خريطة السماء.
+    الآن تعتمد على SkyMapWidget الذي يرسم الخريطة باستخدام Kivy بدلاً من matplotlib.
+    """
+    def __init__(self, dt, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = "vertical"
+        self.padding = 10
+        self.spacing = 10
+        self.size_hint_y = None
+        self.height = 400
+        self.dt = dt
+        self.update_content(dt)
 
-            fig, ax = plt.subplots(figsize=(8, 8))
-            bg_color = '#300544'
-            fig.patch.set_facecolor(bg_color)
-            ax.set_facecolor(bg_color)
-            ax.set_xlim(-1.2, 1.2)
-            ax.set_ylim(-1.2, 1.2)
-
-            circle = plt.Circle((0, 0), 1, edgecolor='#ffffff', facecolor='#0c0842', lw=2)
-            ax.add_artist(circle)
-
-            directions = {"شمال": 0, "شرق": 90, "جنوب": 180, "غرب": 270}
-            for dir_label, angle in directions.items():
-                x = np.cos(np.radians(angle))
-                y = np.sin(np.radians(angle))
-                ax.text(x * 1.2, y * 1.2, reshape_text(dir_label),
-                        ha='center', va='center', fontsize=12, color='white')
-
-            for angle in range(0, 360, 30):
-                x = np.cos(np.radians(angle)) * 1.05
-                y = np.sin(np.radians(angle)) * 1.05
-                ax.text(x, y, f"{angle}°", ha='center', va='center', fontsize=8, color='white')
-
-            for r in results:
-                if r["alt"] < 0:
-                    continue
-                r_coord = 1 - r["alt"] / 90.0
-                x = np.cos(np.radians(r["az"])) * r_coord
-                y = np.sin(np.radians(r["az"])) * r_coord
-                color = planet_colors.get(r["name"], "white")
-                ax.plot(x, y, 'o', color=color, markersize=8)
-                ax.text(x, y + 0.05, reshape_text(r["name"]), fontsize=10,
-                        color='white', ha='left', va='bottom')
-
-            ax.set_aspect('equal')
-            ax.axis('off')
-
-            for file in os.listdir(IMAGE_FOLDER):
-                file_path = os.path.join(IMAGE_FOLDER, file)
-                if os.path.isfile(file_path) and file.startswith("sky_map") and file.endswith('.png'):
-                    os.remove(file_path)
-
-            timestamp = int(datetime.datetime.now().timestamp())
-            image_path = os.path.join(IMAGE_FOLDER, f"sky_map_{timestamp}.png")
-            plt.savefig(image_path, bbox_inches='tight', dpi=150)
-            plt.close()
-
-            self.clear_widgets()
-            img_widget = Image(source=image_path, allow_stretch=True, keep_ratio=True)
-            self.add_widget(img_widget)
-        except Exception as e:
-            self.clear_widgets()
-            error_label = Label(
-                text=process_text("حدث خطأ أثناء رسم الخريطة"),
-                font_size='16sp',
-                color=(1, 0, 0, 1)
-            )
-            self.add_widget(error_label)
+    def update_content(self, dt):
+        self.dt = dt
+        self.clear_widgets()
+        sky_map = SkyMapWidget(dt=dt)
+        self.add_widget(sky_map)
 
 # -------------------------------------------------------------------
 # ValueAdjuster - لضبط الأرقام
