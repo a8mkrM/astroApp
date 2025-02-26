@@ -36,19 +36,20 @@ jobs:
           mkdir -p $HOME/Android/Sdk/cmdline-tools/latest
           mv android-cmdline/cmdline-tools/* $HOME/Android/Sdk/cmdline-tools/latest/
           
-          # تعيين متغير البيئة لـ Android SDK
+          # تعيين متغير البيئة ANDROID_SDK_ROOT
           export ANDROID_SDK_ROOT=$HOME/Android/Sdk
           
-          # تثبيت Build Tools (الإصدار 31.0.0 يحتوي على AIDL)
-          yes | $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --install "build-tools;31.0.0"
-          # تثبيت منصة Android المطلوبة (مثلاً android-31)
-          yes | $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --install "platforms;android-31"
+          # تثبيت Build Tools (الإصدار 30.0.3 يحتوي على AIDL)
+          yes | $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --install "build-tools;30.0.3"
+          # تثبيت منصة Android المطلوبة (على سبيل المثال android-30)
+          yes | $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --install "platforms;android-30"
 
-      - name: Update PATH for Build Tools
+      - name: Update PATH for Build Tools and verify AIDL
         run: |
-          echo "$HOME/Android/Sdk/build-tools/31.0.0" >> $GITHUB_PATH
-          # التحقق من تثبيت AIDL
-          $HOME/Android/Sdk/build-tools/31.0.0/aidl --version
+          # إضافة مسار Build Tools (30.0.3) إلى PATH
+          echo "$HOME/Android/Sdk/build-tools/30.0.3" >> $GITHUB_PATH
+          # التحقق من وجود أداة AIDL
+          $HOME/Android/Sdk/build-tools/30.0.3/aidl --version
 
       - name: Initialize Buildozer
         run: |
@@ -56,7 +57,7 @@ jobs:
 
       - name: Update buildozer.spec
         run: |
-          # تعديل ملف buildozer.spec وفق إعدادات التطبيق
+          # تعديل ملف buildozer.spec وفقًا لإعدادات التطبيق
           sed -i 's/^title = .*/title = AstroApp/' buildozer.spec
           sed -i 's/^package\.name = .*/package.name = astroapp/' buildozer.spec
           sed -i 's/^package\.domain = .*/package.domain = org.example/' buildozer.spec
