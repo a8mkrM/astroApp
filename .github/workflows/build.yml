@@ -36,7 +36,7 @@ jobs:
           mkdir -p $HOME/Android/Sdk/cmdline-tools/latest
           mv android-cmdline/cmdline-tools/* $HOME/Android/Sdk/cmdline-tools/latest/
           
-          # تعيين متغير البيئة ANDROID_SDK_ROOT
+          # تعيين متغير البيئة لـ Android SDK
           export ANDROID_SDK_ROOT=$HOME/Android/Sdk
           
           # تثبيت Build Tools (الإصدار 30.0.3 يحتوي على AIDL)
@@ -48,6 +48,7 @@ jobs:
         run: |
           # إضافة مسار Build Tools (30.0.3) إلى PATH
           echo "$HOME/Android/Sdk/build-tools/30.0.3" >> $GITHUB_PATH
+          export PATH=$PATH:$HOME/Android/Sdk/build-tools/30.0.3
           # التحقق من وجود أداة AIDL
           $HOME/Android/Sdk/build-tools/30.0.3/aidl --version
 
