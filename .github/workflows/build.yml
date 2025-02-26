@@ -30,18 +30,25 @@ jobs:
 
       - name: Install Android Command-line Tools and Build Tools
         run: |
-          # تحميل أدوات الأوامر الخاصة بـ Android
+          # تحميل أدوات Android Command-line Tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip commandlinetools-linux-9477386_latest.zip -d android-cmdline
           mkdir -p $HOME/Android/Sdk/cmdline-tools/latest
           mv android-cmdline/cmdline-tools/* $HOME/Android/Sdk/cmdline-tools/latest/
+          
+          # تعيين متغير البيئة لـ Android SDK
           export ANDROID_SDK_ROOT=$HOME/Android/Sdk
-          # تثبيت Build Tools والإضافات الضرورية (يمكنك تعديل الإصدارات حسب الحاجة)
+          
+          # تثبيت Build Tools (الإصدار 31.0.0 يحتوي على AIDL)
           yes | $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --install "build-tools;31.0.0"
+          # تثبيت منصة Android المطلوبة (مثلاً android-31)
           yes | $HOME/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --install "platforms;android-31"
 
       - name: Update PATH for Build Tools
-        run: echo "$HOME/Android/Sdk/build-tools/31.0.0" >> $GITHUB_PATH
+        run: |
+          echo "$HOME/Android/Sdk/build-tools/31.0.0" >> $GITHUB_PATH
+          # التحقق من تثبيت AIDL
+          $HOME/Android/Sdk/build-tools/31.0.0/aidl --version
 
       - name: Initialize Buildozer
         run: |
@@ -49,7 +56,7 @@ jobs:
 
       - name: Update buildozer.spec
         run: |
-          # تأكد من تعديل ملف buildozer.spec حسب إعدادات مشروعك
+          # تعديل ملف buildozer.spec وفق إعدادات التطبيق
           sed -i 's/^title = .*/title = AstroApp/' buildozer.spec
           sed -i 's/^package\.name = .*/package.name = astroapp/' buildozer.spec
           sed -i 's/^package\.domain = .*/package.domain = org.example/' buildozer.spec
