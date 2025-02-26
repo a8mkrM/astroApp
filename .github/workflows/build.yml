@@ -1,0 +1,51 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          sudo apt update && sudo apt install -y git zip unzip openjdk-17-jdk
+          python -m pip install --upgrade pip
+          pip install buildozer cython kivy numpy pytz arabic-reshaper python-bidi
+
+      - name: Initialize Buildozer
+        run: |
+          buildozer init
+
+      - name: Update buildozer.spec
+        run: |
+          # تأكد من تحديث ملف buildozer.spec حسب إعدادات مشروعك
+          sed -i 's/^title = .*/title = AstroApp/' buildozer.spec
+          sed -i 's/^package\.name = .*/package.name = astroapp/' buildozer.spec
+          sed -i 's/^package\.domain = .*/package.domain = org.example/' buildozer.spec
+          sed -i 's/^version = .*/version = 0.1/' buildozer.spec
+          sed -i 's/^requirements = .*/requirements = python3,kivy,numpy,pytz,arabic-reshaper,python-bidi/' buildozer.spec
+          sed -i 's/^source\.include_exts = .*/source.include_exts = py,png,jpg,kv,ttf,otf,xml,json/' buildozer.spec
+          sed -i 's/^# *source\.include_dirs = .*/source.include_dirs = planetimg,fonts/' buildozer.spec
+
+      - name: Build APK
+        run: |
+          buildozer -v android debug
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: bin/*.apk
